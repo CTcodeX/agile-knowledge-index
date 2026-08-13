@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Field Index — an agile practices matcher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#E7E4DA;
+    --ink:#201F1B;
+    --ink-soft:#524E44;
+    --card:#FCFBF7;
+    --line:#C9C4B4;
+    --thinking:#B8843A;
+    --thinking-deep:#6E4E1F;
+    --thinking-bg:#F3E7D2;
+    --problem:#2F5C56;
+    --problem-deep:#16302C;
+    --problem-bg:#DCE7E4;
+    --match:#5B4B8A;
+    --match-deep:#332755;
+    --match-bg:#E6E1F2;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Source Serif 4', serif;
+    padding:0 0 64px;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:0 24px;}
+
+  header{padding:48px 24px 28px;border-bottom:1px solid var(--line);}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin:0 0 10px;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:34px;
+    margin:0 0 10px;
+    letter-spacing:-.01em;
+  }
+  header p{margin:0;max-width:52ch;color:var(--ink-soft);font-size:16px;line-height:1.6;}
+
+  .tabs{display:flex;gap:0;margin:28px 0 0;border-bottom:1px solid var(--line);}
+  .tab{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:500;
+    font-size:14px;
+    background:none;border:none;cursor:pointer;
+    padding:10px 4px;margin-right:28px;
+    color:var(--ink-soft);
+    border-bottom:2px solid transparent;
+    transform:translateY(1px);
+  }
+  .tab.active{color:var(--ink);border-bottom-color:var(--ink);}
+  .tab:focus-visible{outline:2px solid var(--match);outline-offset:3px;}
+
+  section{padding-top:32px;}
+  section[hidden]{display:none;}
+
+  /* --- Browse view --- */
+  .filter-group{margin-bottom:20px;}
+  .filter-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-soft);display:block;margin-bottom:8px;
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    padding:5px 12px;border-radius:2px;
+    border:1px solid var(--line);
+    background:var(--card);
+    color:var(--ink-soft);
+    cursor:pointer;
+    transition:background .15s, color .15s, border-color .15s;
+  }
+  .chip:focus-visible{outline:2px solid var(--match);outline-offset:2px;}
+  .chip[data-group="thinking"].on{background:var(--thinking);border-color:var(--thinking-deep);color:#fff;}
+  .chip[data-group="problem"].on{background:var(--problem);border-color:var(--problem-deep);color:#fff;}
+  .clear-btn{
+    font-family:'IBM Plex Mono', monospace;font-size:11.5px;
+    background:none;border:none;text-decoration:underline;
+    color:var(--ink-soft);cursor:pointer;padding:0;margin-top:14px;
+  }
+
+  .count{font-family:'IBM Plex Mono', monospace;font-size:12px;color:var(--ink-soft);margin:24px 0 14px;}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:640px){.grid{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-left:4px solid var(--thinking);
+    border-radius:2px;
+    padding:16px 18px 18px;
+    position:relative;
+  }
+  .card-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .card h3{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;font-size:16.5px;margin:0;line-height:1.3;
+  }
+  .acc{font-family:'IBM Plex Mono', monospace;font-size:11px;color:var(--ink-soft);white-space:nowrap;}
+  .kind{
+    font-family:'IBM Plex Mono', monospace;font-size:11px;
+    color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;
+    margin:4px 0 10px;
+  }
+  .card p.blurb{margin:0 0 12px;font-size:14.5px;line-height:1.55;color:var(--ink);}
+  .detail-wrap{margin:0 0 12px;padding:12px 14px;background:var(--paper);border-radius:2px;}
+  .detail-wrap[hidden]{display:none;}
+  .detail{margin:0;font-size:14px;line-height:1.6;color:var(--ink);}
+  .detail-note{
+    margin:8px 0 0;font-family:'IBM Plex Mono', monospace;font-size:10.5px;
+    color:var(--ink-soft);font-style:normal;
+  }
+  .readmore-btn{
+    display:inline-block;margin:0 0 14px;padding:0;border:none;background:none;
+    font-family:'IBM Plex Mono', monospace;font-size:11.5px;color:var(--thinking-deep);
+    text-decoration:underline;cursor:pointer;
+  }
+  .readmore-btn:focus-visible{outline:2px solid var(--match);outline-offset:2px;}
+  .tagrow{display:flex;flex-wrap:wrap;gap:6px;}
+  .tag{
+    font-family:'IBM Plex Mono', monospace;font-size:10.5px;
+    padding:3px 8px;border-radius:2px;
+  }
+  .tag.thinking{background:var(--thinking-bg);color:var(--thinking-deep);}
+  .tag.problem{background:var(--problem-bg);color:var(--problem-deep);}
+  .source{margin:10px 0 0;font-family:'IBM Plex Mono', monospace;font-size:11px;line-height:1.7;}
+  .source a{color:var(--thinking-deep);}
+  .source span{color:var(--ink-soft);}
+
+  .empty{
+    font-family:'IBM Plex Mono', monospace;font-size:13px;color:var(--ink-soft);
+    padding:40px 0;text-align:center;border:1px dashed var(--line);
+  }
+
+  /* --- Diagnose view --- */
+  .diag-intro{color:var(--ink-soft);font-size:15px;margin:0 0 18px;max-width:56ch;line-height:1.6;}
+  textarea{
+    width:100%;min-height:110px;resize:vertical;
+    font-family:'Source Serif 4', serif;font-size:16px;
+    padding:14px 16px;border:1px solid var(--line);border-radius:2px;
+    background:var(--card);color:var(--ink);line-height:1.5;
+  }
+  textarea:focus-visible{outline:2px solid var(--match);outline-offset:1px;}
+  .diag-actions{display:flex;align-items:center;gap:16px;margin-top:12px;}
+  .go-btn{
+    font-family:'Space Grotesk', sans-serif;font-weight:600;font-size:14px;
+    background:var(--ink);color:var(--paper);border:none;border-radius:2px;
+    padding:11px 20px;cursor:pointer;
+  }
+  .go-btn:disabled{opacity:.5;cursor:default;}
+  .go-btn:focus-visible{outline:2px solid var(--match);outline-offset:2px;}
+  .status{font-family:'IBM Plex Mono', monospace;font-size:12.5px;color:var(--ink-soft);}
+
+  .results{margin-top:30px;display:flex;flex-direction:column;gap:14px;}
+  .slip{
+    background:var(--card);border:1px solid var(--line);border-radius:2px;
+    padding:18px 20px 20px;position:relative;
+    background-image:radial-gradient(circle, var(--paper) 3.5px, transparent 3.6px);
+    background-size:16px 16px;
+    background-position:0 -8px;
+    background-repeat:repeat-x;
+    background-origin:border-box;
+  }
+  .slip-inner{padding-top:6px;}
+  .slip-stamp{
+    display:inline-block;
+    font-family:'IBM Plex Mono', monospace;font-size:10.5px;letter-spacing:.1em;
+    color:var(--match-deep);background:var(--match-bg);
+    padding:3px 8px;border-radius:2px;margin-bottom:10px;
+  }
+  .slip h4{
+    font-family:'Space Grotesk', sans-serif;font-weight:600;font-size:17px;margin:0 0 4px;
+  }
+  .slip .kind{margin-bottom:10px;}
+  .slip .why{font-size:14.5px;line-height:1.6;color:var(--ink);margin:0;}
+  .why-label{
+    font-family:'IBM Plex Mono', monospace;font-size:10.5px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:4px;
+  }
+
+  .error{
+    font-family:'IBM Plex Mono', monospace;font-size:13px;color:#8C2F22;
+    border:1px solid #D9B4A9;background:#F6E9E4;border-radius:2px;
+    padding:12px 14px;margin-top:16px;
+  }
+  .foot-note{
+    font-family:'IBM Plex Mono', monospace;font-size:11px;color:var(--ink-soft);
+    margin-top:40px;border-top:1px solid var(--line);padding-top:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Prototype — v0.1</p>
+    <h1>Field Index</h1>
+    <p>A working library of practices, methods, tools and workshops from Agile, Lean, Theory of Constraints, Systems Thinking and Design Thinking — tagged by the problem they solve. Browse by tag, or describe a challenge and get matched.</p>
+    <div class="tabs" role="tablist">
+      <button class="tab active" role="tab" aria-selected="true" id="tab-browse" onclick="setView('browse')">Browse the index</button>
+      <button class="tab" role="tab" aria-selected="false" id="tab-diagnose" onclick="setView('diagnose')">Describe your challenge</button>
+    </div>
+  </header>
+
+  <section id="view-browse" role="tabpanel" aria-labelledby="tab-browse">
+    <div class="filter-group">
+      <span class="filter-label">Thinking / framework</span>
+      <div class="chips" id="thinking-chips"></div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Problem it addresses</span>
+      <div class="chips" id="problem-chips"></div>
+    </div>
+    <button class="clear-btn" onclick="clearFilters()">Clear all filters</button>
+    <p class="count" id="result-count"></p>
+    <div class="grid" id="card-grid"></div>
+  </section>
+
+  <section id="view-diagnose" role="tabpanel" aria-labelledby="tab-diagnose" hidden>
+    <p class="diag-intro">Describe what's actually going on — in your own words, the way you'd say it to a colleague. This checks your description against the tagged index above and explains why each match fits your specific situation.</p>
+    <textarea id="challenge-input" placeholder="e.g. Our team keeps missing sprint commitments and every retro turns into the same argument about who owns what..."></textarea>
+    <div class="diag-actions">
+      <button class="go-btn" id="go-btn" onclick="runMatch()">Find matches</button>
+      <span class="status" id="status"></span>
+    </div>
+    <div class="results" id="results"></div>
+  </section>
+
+  <p class="foot-note">76 entries drawn from your own Facilitating Agility posts (2011–2020). The four Facilitation Toolkit posts and the Flow Metrics post are now split into their individual named techniques, each linked back to its source post(s) below. 7 problem tags were added beyond your original set to cover meeting-facilitation topics: review and rename freely.</p>
+</div>
+
+<script>
+const LIBRARY = [
+  {
+    id:"facilitation-structure", name:"Facilitation Game Structure: Open – Explore – Close", kind:"Method",
+    thinking:["Agile/Scrum"], problem:["Unproductive or unfocused meetings"],
+    blurb:"A three-part structure — Open, Explore, Close — for designing any facilitated session so it has deliberate pace instead of drifting.",
+    detail:"Every facilitated session follows the same underlying shape: Open, Explore, Close. Opening activities surface what actually happened (the 'past'), Exploring activities dig into what it means and why, and Closing activities turn that insight into a committed plan for the 'future.' The same three-part shape works for retrospectives, but also for any other collaborative session — just adjust which part gets the most time depending on whether the session's focus is understanding, planning, or deciding. Sharing the agenda with the group up front, including how long each section will take, consistently improves how much people actually collaborate, even when the plan changes mid-session.", detailSource:"original",
+    sources:[{title:"Facilitation Game Structure: Open – Explore – Close", status:"publish", date:"2012-03-14", url:"https://facilitatingagility.wordpress.com/2012/03/14/facilitation-toolkit-working-with-games/"}]
+  },
+  {
+    id:"what-is-agile-facilitation", name:"What is Agile Facilitation?", kind:"Practice",
+    thinking:["Agile/Scrum", "Complexity Theory"], problem:["Facilitator role unclear"],
+    blurb:"A definition of facilitation as helping a group interpret its own context and choose its path forward, without the facilitator supplying answers or content.",
+    detail:"Facilitation isn't about 'making things easier' — collaboration is hard, and good facilitation doesn't remove that, it makes it productive. The facilitator's job is to help a group interpret its own situation and choose its own path forward, without supplying the answers or contributing content themselves. In predictable situations, that means helping the team set clear, attainable goals fast, using Scrum's short cycles to correct course quickly. In genuinely uncertain situations, predefined goals can be actively harmful — instead the facilitator helps the group clarify the boundaries they're exploring within, using something like Cynefin's Probe-Sense-Respond pattern. Either way, the facilitator's role is to ensure everyone has a voice, understands the constraints, and can act from a shared, informed picture — not to decide what's right themselves.", detailSource:"original",
+    sources:[{title:"What is Agile Facilitation?", status:"publish", date:"2012-03-05", url:"https://facilitatingagility.wordpress.com/2012/03/05/what-is-agile-facilitation/"}]
+  },
+  {
+    id:"appreciative-inquiry-retro", name:"Appreciative Inquiry Retrospective", kind:"Practice",
+    thinking:["Agile/Scrum", "Design Thinking"], problem:["Low psychological safety", "Chronic firefighting"],
+    blurb:"A positive-framed retrospective that asks what's working well and why, instead of what went wrong — told through a real on-the-spot facilitation story.",
+    detail:"Rather than the standard 'what went wrong' format, Appreciative Inquiry starts from what's already working: pairs interview each other with questions like 'when were you at your best this sprint?', 'who else was involved?' and 'what conditions were present?' — then groups of four to six find the common themes across pairs. It works best offered as a genuine choice to the team rather than imposed, even with logic-focused or skeptical teams; letting them pick the format themselves is often what makes it land. Close by asking the group 'how can we apply this to future sprints?' in round-robin format, to turn the positive reflection into concrete, committed actions rather than leaving it as a feel-good exercise.", detailSource:"original",
+    sources:[{title:"Appreciative Inquiry Retrospective", status:"publish", date:"2012-01-27", url:"https://facilitatingagility.wordpress.com/2012/01/27/appreciative-inquiry-facilitation-lessons-from-an-on-the-spot-retrospective/"}]
+  },
+  {
+    id:"favourite-facilitation-books", name:"Favourite Facilitation Books", kind:"Reading list",
+    thinking:["Agile/Scrum"], problem:[],
+    blurb:"A curated shelf of facilitation and management books, from Agile Retrospectives and Gamestorming to Crucial Conversations and Drive.",
+    detail:"Facilitation classics: Facilitator's Guide to Participatory Decision-Making (Sam Kaner) for handling difficult group dynamics; Agile Retrospectives (Derby & Larsen) for retrospective facilitation and 'Inspect and Adapt'; Gamestorming (Gray, Brown & Macanufo) for how facilitation games and metaphor actually work; Visual Meetings (David Sibbet) on visual facilitation; Collaboration Explained (Jean Tabaka) across the full set of agile meetings. On the people side: Drive (Daniel Pink) and Why We Do What We Do (Edward Deci) on intrinsic motivation; Leadership and Self-Deception (Arbinger Institute) and Crucial Conversations on conflict; Brain Rules (John Medina) on how people actually learn; Improv Wisdom (Patricia Ryan Madson) on staying responsive in the room.", detailSource:"original",
+    sources:[{title:"Favourite Facilitation Books", status:"publish", date:"2012-07-16", url:"https://facilitatingagility.wordpress.com/2012/07/16/favourite-facilitation-books/"}]
+  },
+  {
+    id:"okrs", name:"OKRs", kind:"Method",
+    thinking:["Agile/Scrum", "Metrics"], problem:["Stakeholder misalignment", "Wrong metrics"],
+    blurb:"Objectives and Key Results explained through their common failure modes — cascaded performance targets, disconnected metrics — and how tying Key Results to product themes avoids them.",
+    detail:"OKRs (Objectives and Key Results) connect day-to-day work to organizational goals: Objectives state intent, Key Results are the measurable outcomes that show progress. Two common failure modes to watch for: setting objectives with little real connection to strategy (teams end up gaming the metric rather than improving the underlying process), and cascading Key Results down to individuals as personal performance targets — which breaks the moment the product's focus legitimately needs to shift, turning a reasonable pivot into someone's failed target. The fix is keeping Key Results tied to the product rather than the individual, using Product Themes to connect an Objective (e.g. 'Always Available') to a Theme (e.g. 'maintain stability while rebuilding architecture') to a measurable Key Result (e.g. 'reduce MTTR by X%') — so teams can choose their own path to the result rather than being told the method.", detailSource:"original",
+    sources:[{title:"OKRs", status:"publish", date:"2019-11-18", url:"https://facilitatingagility.wordpress.com/2019/11/18/okrs/"}]
+  },
+  {
+    id:"why-retrospectives", name:"Why I Care About Retrospectives", kind:"Practice",
+    thinking:["Agile/Scrum", "Complexity Theory"], problem:["Chronic firefighting"],
+    blurb:"A case for treating the retrospective as the primary tool for continuous improvement and team transformation, not just another ceremony to run through.",
+    detail:"The retrospective is the concrete mechanism behind agile's 'Inspect and Adapt' principle, and it matters most in complex, uncertain environments where teams need to keep adapting to changing information — which describes most software projects. The familiar alternative: everyone quietly aware a project is veering off course, but too late or too pressured to do anything but hope. A well-run retrospective is the antidote — a regular, protected pause to assess progress and act on it before problems compound. Over time the real value shifts from fixing individual sprints to building the underlying team: when a team collaborates openly and engages in constructive disagreement, it gets progressively easier to spot and remove blockers — but that only happens when the team truly owns its own improvements, sustained over time, not when improvement is something done to them.", detailSource:"original",
+    sources:[{title:"Why I Care About Retrospectives", status:"publish", date:"2012-01-08", url:"https://facilitatingagility.wordpress.com/2012/01/08/why-i-care-about-retrospectives/"}]
+  },
+  {
+    id:"powerful-questions", name:"20 Powerful Questions", kind:"Tool",
+    thinking:["Agile/Scrum", "Design Thinking"], problem:["Weak goal-setting or follow-through"],
+    blurb:"Reflective prompt questions for a personal or team retrospective, useful whenever a group is stuck and needs a different angle.",
+    detail:"Prompt questions for when a team or person is stuck and needs a different angle. Pull a handful that feel relevant — 'What's already working that you can build on?', 'Where is courage needed?', 'What's your bottom line?' — rather than working through the whole deck.", detailSource:"original",
+    sources:[{title:"20 Powerful Questions", status:"publish", date:"2013-01-01", url:"https://facilitatingagility.wordpress.com/2013/01/01/20-powerful-questions-for-the-new-year/"}]
+  },
+  {
+    id:"retro-activity-resources", name:"Retrospective Activity Resources", kind:"Reading list",
+    thinking:["Agile/Scrum"], problem:[],
+    blurb:"Curated external sources for retrospective formats and games, once a team has outgrown the standard Went Well / Didn't / Improve structure.",
+    detail:"External sources for retrospective formats once you've outgrown Went Well / Didn't / Improve: the Retrospective Wiki's collected plans (6 Thinking Hats, Everyday Retrospective, Start/Stop/Continue/More/Less Wheel); the Agile Retrospectives book extract (Timeline, Triple Nickels, Team Radar, Force Field Analysis, Fishbone); Esther Derby & Sharon Buckmaster's Partnerships and Possibilities blog (Circles and Soup, Appreciative Retrospective); Thorsten Kalnin's more experimental formats (Agile Speed Dating, Agile Olympics, LEGO Serious Play simulations); and the Gamestorming wiki for general facilitation games repurposed into retrospectives.", detailSource:"original",
+    sources:[{title:"Retrospective Activity Resources", status:"publish", date:"2012-01-08", url:"https://facilitatingagility.wordpress.com/2012/01/08/activities-for-retrospectives-links/"}]
+  },
+  {
+    id:"conflict", name:"Working with Conflict", kind:"Practice",
+    thinking:["Agile/Scrum"], problem:["Conflict"],
+    blurb:"A framework for team conflict — building connection before addressing differences, then using Crucial Conversations' Mutual Purpose and STATE models to structure the hard conversation.",
+    detail:"Conflict is unavoidable wherever there's real collaboration — and healthy conflict is actually a marker of high-performing teams, not a sign something's wrong. Before addressing the conflict itself, it often helps to first build connection around what the parties have in common, rather than diving straight into the disagreement — that's the Arbinger Institute's core recommendation. Once ready to address it directly, Crucial Conversations offers two structures worth knowing: Finding Mutual Purpose (Commit to a mutual purpose, Recognise the purpose behind the strategy, Invent a new mutual purpose, Brainstorm strategies to achieve it) and keeping meaning flowing during the conversation itself (Share the facts, Tell your story, Ask for the other's story, Talk tentatively, Encourage testing). Both have held up across every agile team this was tried with.", detailSource:"original",
+    sources:[{title:"Working with Conflict", status:"private", date:"2019-07-26", url:""}]
+  },
+  {
+    id:"intro-bdd", name:"Intro to BDD", kind:"Practice",
+    thinking:["Agile/Scrum"], problem:["Team lacks shared context"],
+    blurb:"Behaviour-Driven Design as a whole-team scenario-writing practice that surfaces unknowns and tacit knowledge before building, not just a testing technique.",
+    detail:"Behaviour-Driven Design uses Scenarios to describe both the behaviour of the people using the software and the system's response — visual, concrete thinking about what actually needs to be built, before building it. It's often introduced as a testing technique (it produces clean, implementable system tests, and is also known as Acceptance Test-Driven Development or Specification by Example), but its highest value comes from the whole team writing the scenarios together: unknowns and tacit knowledge that would otherwise stay hidden surface fast, and the process speeds up noticeably after a few rounds of practice. Best entry points: Daniel Terhorst-North's 'What's in a Story' if you only have time for one thing, or Liz Keogh's ~40 minute Real Conversations in BDD talk if you have a bit longer.", detailSource:"original",
+    sources:[{title:"Intro to BDD", status:"private", date:"2019-11-08", url:""}]
+  },
+  {
+    id:"ilities", name:"The Software ‘-ilities’", kind:"Tool",
+    thinking:["Lean"], problem:["Technical debt going unprioritized"],
+    blurb:"A checklist of non-functional qualities — scalability, maintainability, security — to raise deliberately during backlog refinement so technical work doesn't quietly become debt.",
+    detail:"A checklist to raise deliberately during backlog refinement so technical work doesn't quietly become debt. Run through: scalability, maintainability, availability, extensibility, security, portability, usability — and ask whether each is being addressed.", detailSource:"original",
+    sources:[{title:"The Software ‘-ilities’", status:"publish", date:"2019-12-02", url:"https://facilitatingagility.wordpress.com/2019/12/02/ilities/"}]
+  },
+  {
+    id:"all-about-retro-links", name:"All About Retrospectives — Links", kind:"Reading list",
+    thinking:["Agile/Scrum"], problem:[],
+    blurb:"Curated introductory reading on why and how to run retrospectives well.",
+    detail:"Introductory reading on why and how to run retrospectives well: Rachel Davies' piece on refactoring your development process through retrospectives; Esther Derby's Insights You Can Use blog (filter on Retrospectives); a comprehensive links list on the basics plus interesting variations; Agile Advice's broader collection organized under Team Building, Corporate Culture, and Self-Organizing Teams; and InfoQ's collected tips and techniques, where the comments sections are often as useful as the article.", detailSource:"original",
+    sources:[{title:"All About Retrospectives — Links", status:"publish", date:"2011-12-27", url:"https://facilitatingagility.wordpress.com/2011/12/27/all-about-retrospectives-links/"}]
+  },
+  {
+    id:"prime-directive", name:"The Retrospective Prime Directive", kind:"Practice",
+    thinking:["Agile/Scrum"], problem:["Low psychological safety", "Conflict"],
+    blurb:"The founding assumption of a safe retrospective — everyone did the best they could with what they knew at the time — and why holding it moves teams from blame to root cause.",
+    detail:"'Regardless of what we discover, we understand and truly believe that everyone did the best job they could, given what they knew at the time, their skills and abilities, the resources available, and the situation at hand.' — Norman Kerth's Retrospective Prime Directive, from Project Retrospectives: A Handbook for Team Reviews (2001). Holding this to be true even when the product is below standard or a team member seems to be underperforming shifts the conversation away from blame and toward the actual source of the problem — technical, budgetary, or interpersonal. It's also a significant trust-builder: it's only in a genuinely safe space that people are willing to surface the real issues, or share what's actually working so others can learn from it.", detailSource:"original",
+    sources:[{title:"The Retrospective Prime Directive", status:"publish", date:"2011-12-27", url:"https://facilitatingagility.wordpress.com/2011/12/27/what-is-the-retrospect-prime-directive/"}]
+  },
+  {
+    id:"intro-cynefin", name:"Intro to Cynefin", kind:"Method",
+    thinking:["Systems Thinking", "Complexity Theory"], problem:["Weak root-cause analysis", "Risk blindness"],
+    blurb:"Dave Snowden's sense-making framework for sorting work into obvious, complicated, complex, and chaotic, so the team picks an approach that actually fits the problem.",
+    detail:"Cynefin (Dave Snowden, Cognitive Edge) sorts work into four domains based on how predictable cause-and-effect is: Obvious (clear best practice, sense-categorize-respond), Complicated (requires expertise to analyze, sense-analyze-respond), Complex (cause and effect only make sense in hindsight — the domain most of software development actually lives in, requiring probe-sense-respond), and Chaotic (no clear cause and effect, requiring immediate action just to stabilize). The value isn't the taxonomy itself — it's recognizing that a technique which works well for Obvious or Complicated work (detailed upfront planning, expert analysis) can actively backfire in Complex work, where safe-to-fail experiments and tight sensing loops are what's actually needed.", detailSource:"original",
+    sources:[{title:"Intro to Cynefin", status:"private", date:"2019-11-08", url:""}]
+  },
+  {
+    id:"introducing-agility", name:"Introducing Agility", kind:"Practice",
+    thinking:["Agile/Scrum", "Complexity Theory"], problem:["Onboarding newcomers to agile"],
+    blurb:"An explanation of agile's core idea — continuous improvement through work and learning being genuinely integrated — written for someone outside software.",
+    detail:"At its core, agile is about continuous improvement: there's never a point where a team has all the answers, so work and learning have to be genuinely integrated rather than learning happening 'before' the work starts. It grew out of a recognition that centralized, traditional-management decision-making is a poor fit for producing quality software, and it draws heavily from disciplines outside software — complexity science, facilitation, lean manufacturing among them. The Agile Manifesto's principles function less as rules and more as a 'litmus test': a way to check whether a given practice, in this specific context, is actually building the right thing well, or just being followed for its own sake. Practices are situational and swap in and out; the principles are what stay constant — which is also why 'what is agile, really' rarely gets the same answer twice.", detailSource:"original",
+    sources:[{title:"Introducing Agility", status:"draft", date:"2016-10-09", url:""}]
+  },
+  {
+    id:"surf-coaching", name:"Coaching Lessons from Learning to Surf", kind:"Practice",
+    thinking:["Agile/Scrum"], problem:["Coaching resistance to change"],
+    blurb:"Observations on how a good coach lets the learner fail safely and ask their own questions, drawn from learning to surf and applied directly to agile coaching.",
+    detail:"Observations from four surf lessons with different coaches, deliberately looked at through an agile-coaching lens. The resistance that shows up before every lesson ('maybe I'll skip this one') never fully disappears — the useful move turned out to be ignoring it rather than trying to motivate past it. Good coaches mostly don't tell you what to do; they get you moving and let you find your own way, offering information only when it's actually needed, because as a beginner there's already too much sensory input to process someone else's correction on top of it. Once a mistake repeats often enough to register as a pattern, that's the moment a person is actually ready to ask for help with it — coaching before that point tends to just create dependency on being told rather than genuine learning.", detailSource:"original",
+    sources:[{title:"Coaching Lessons from Learning to Surf", status:"publish", date:"2012-02-26", url:"https://facilitatingagility.wordpress.com/2012/02/26/what-im-learning-about-coaching-from-learning-to-surf/"}]
+  },
+  {
+    id:"gamification-resources", name:"Gamification Resources", kind:"Reading list",
+    thinking:["Design Thinking"], problem:[],
+    blurb:"Curated resources on applying game mechanics and intrinsic motivation to increase engagement in team practices.",
+    detail:"Starting point: RSA Animate's summary of Drive (intrinsic motivation) as the foundation before adding game mechanics on top — gamification bolted onto low intrinsic motivation tends to backfire. From there: the gamified.uk site's introduction to game mechanics and how to match different mechanics to different situations, the '52 Gamification Mechanics & Elements' reference, and Amy Jo Kim's Game Thinking Roadmaps on focusing development effort and structuring progression.", detailSource:"original",
+    sources:[{title:"Gamification Resources", status:"private", date:"2019-05-09", url:""}]
+  },
+  {
+    id:"fishbowl-facilitation", name:"Fishbowl Facilitation", kind:"Workshop",
+    thinking:["Agile/Scrum", "Design Thinking"], problem:["Unproductive or unfocused meetings", "Stakeholder misalignment"],
+    blurb:"An open or closed fishbowl format for structuring group discussion, with observers using pen-and-paper tracking to stay actively engaged rather than passive.",
+    detail:"Fishbowl puts a small group in an inner circle actively discussing a topic while a larger group observes from outside — open fishbowl allows observers to rotate into an empty 'guest chair,' closed fishbowl keeps the inner and outer groups fixed for the session. Giving observers paper and pen to track specific points being made turns them into active participants rather than passive listeners, and noticeably changes the quality of what they contribute when they do get a turn. Works well when you want broader input without every voice competing in one large-group conversation at once.", detailSource:"original",
+    sources:[{title:"Fishbowl Facilitation", status:"private", date:"2020-02-08", url:""}]
+  },
+  {
+    id:"focus-on-finishing", name:"Focus on Finishing", kind:"Practice",
+    thinking:["Lean", "Theory of Constraints"], problem:["Poor flow", "Unpredictable delivery"],
+    blurb:"Why finishing beats starting — reducing WIP, swarming on blocked items, reserving capacity for unplanned work — framed around the real cost of unfinished work sitting in the system.",
+    detail:"Until code is in production, no value is actually being generated — it's just work-in-progress stuck in the system. The instinct to start something new is usually driven by waiting: any hand-off between roles creates a queue, and teams rewarded for 'being productive' tend to start new work rather than stop and unblock what's stalled. The risk math is asymmetric: unstarted work costs almost nothing to reprioritize, but unfinished work accumulates real cost — feedback delays create rework, unmerged code creates merge conflicts, and untested code carries unknown risk around whether it actually fits what users need. Practical responses: swarm on a blocked item until it's actually done rather than starting something else; reserve a known percentage of team capacity for unplanned work based on historical averages; and move toward a pull system, where new work only starts once there's real capacity, rather than being pushed in on a fixed schedule regardless of WIP.", detailSource:"original",
+    sources:[{title:"Focus on Finishing", status:"publish", date:"2019-11-12", url:"https://facilitatingagility.wordpress.com/2019/11/12/focus-on-finishing/"}]
+  },
+  {
+    id:"flow-load", name:"Flow Load", kind:"Tool",
+    thinking:["Lean", "Theory of Constraints", "Metrics"], problem:["Poor flow", "Unpredictable delivery"],
+    blurb:"How much work is currently in progress. If WIP exceeds team capacity, delivery dates become unpredictable — track it weekly or use a Cumulative Flow Diagram to spot bottlenecks.",
+    detail:"How much work is currently in progress. Count items in progress weekly, or read the Cumulative Flow Diagram in Jira/Azure DevOps — keep it just under team size to stay predictable.", detailSource:"original",
+    sources:[{title:"Flow Metrics", status:"publish", date:"2019-12-12", url:"https://facilitatingagility.wordpress.com/2019/12/12/introduction-to-flow-metrics/"}]
+  },
+  {
+    id:"cycle-time", name:"Cycle Time", kind:"Tool",
+    thinking:["Lean", "Theory of Constraints", "Metrics"], problem:["Wrong metrics", "Unpredictable delivery"],
+    blurb:"The average time a story takes from start to done. More reliable than velocity for forecasting delivery, since it's based on actual duration including wait time.",
+    detail:"How long a story takes from start to done. Track from a fixed start point (refinement or sprint entry) to a fixed end point (ideally production) — more reliable for forecasting than velocity.", detailSource:"original",
+    sources:[{title:"Flow Metrics", status:"publish", date:"2019-12-12", url:"https://facilitatingagility.wordpress.com/2019/12/12/introduction-to-flow-metrics/"}]
+  },
+  {
+    id:"throughput", name:"Throughput", kind:"Tool",
+    thinking:["Lean", "Theory of Constraints", "Metrics"], problem:["Poor flow", "Unpredictable delivery"],
+    blurb:"How many items the team typically completes in a sprint or other fixed period. Sprint commitments above historic throughput build a bottleneck rather than raise capacity.",
+    detail:"How many items the team typically finishes per sprint. Read it straight from Jira/Azure DevOps sprint reports — keep sprint commitments at or below this number.", detailSource:"original",
+    sources:[{title:"Flow Metrics", status:"publish", date:"2019-12-12", url:"https://facilitatingagility.wordpress.com/2019/12/12/introduction-to-flow-metrics/"}]
+  },
+  {
+    id:"flow-distribution", name:"Flow Distribution", kind:"Tool",
+    thinking:["Lean", "Theory of Constraints", "Metrics"], problem:["Wrong metrics", "Stakeholder misalignment"],
+    blurb:"What kind of work — features, risk, tech debt, bugs — is actually being prioritized. Tracking it as a percentage over time turns 'what next' into an evidence-based conversation.",
+    detail:"What kind of work — features, risk, bugs — is actually getting done, as a percentage. Categorize completed items each sprint and chart the split over time.", detailSource:"original",
+    sources:[{title:"Flow Metrics", status:"publish", date:"2019-12-12", url:"https://facilitatingagility.wordpress.com/2019/12/12/introduction-to-flow-metrics/"}]
+  },
+  {
+    id:"flow-efficiency", name:"Flow Efficiency", kind:"Tool",
+    thinking:["Lean", "Theory of Constraints", "Metrics"], problem:["Poor flow"],
+    blurb:"Value-adding time divided by total time. Typically 5–40% in real organizations; a Value Stream Map reveals exactly where the wait time is hiding.",
+    detail:"Value-adding time divided by total time — how much delivery speed is on the table. Run a Value Stream Map to find it; typical range is 5–40%.", detailSource:"original",
+    sources:[{title:"Flow Metrics", status:"publish", date:"2019-12-12", url:"https://facilitatingagility.wordpress.com/2019/12/12/introduction-to-flow-metrics/"}]
+  },
+  {
+    id:"fist-of-five", name:"Fist of Five", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Low psychological safety", "Weak goal-setting or follow-through"],
+    blurb:"A quick 1–5 finger show used both as a feeling/focus check at the start of a session and as a consensus vote at the end — same gesture, two different jobs.",
+    detail:"A 1–5 finger vote showing where everyone stands, all at once. Ask a question, count down, everyone shows fingers simultaneously — used for a feeling/focus check or a consensus vote.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Check-In", status:"publish", date:"2012-03-15", url:"https://facilitatingagility.wordpress.com/2012/03/15/facilitation-toolkit-activities-for-check-in/"}, {title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"esvp", name:"ESVP", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Low psychological safety"],
+    blurb:"A one-word self-check (Explorer, Shopper, Vacationer, Prisoner) that surfaces how committed each person actually is to being in the room, without singling anyone out.",
+    detail:"A one-word self-check on how committed someone feels to being here: Explorer, Shopper, Vacationer, or Prisoner. Ask everyone to silently pick one, then show hands or tally.", detailSource:"elaborated",
+    sources:[{title:"Facilitation Toolkit: Check-In", status:"publish", date:"2012-03-15", url:"https://facilitatingagility.wordpress.com/2012/03/15/facilitation-toolkit-activities-for-check-in/"}]
+  },
+  {
+    id:"form-a-line", name:"Form a Line", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Team lacks shared context"],
+    blurb:"Participants physically line up from low to high in response to a question — a fast, visible way to gauge the spread of knowledge or opinion in a group.",
+    detail:"Shows the spread of knowledge or opinion in the room. Ask a low-to-high question, have people physically line up from low to high in response.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Check-In", status:"publish", date:"2012-03-15", url:"https://facilitatingagility.wordpress.com/2012/03/15/facilitation-toolkit-activities-for-check-in/"}]
+  },
+  {
+    id:"wiifm", name:"WIIFM (What's In It For Me)", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Unproductive or unfocused meetings"],
+    blurb:"Participants write down what they personally want from the session, then revisit those notes at closing — sets individual objectives and gives the facilitator a read on expectations.",
+    detail:"Surfaces what each person actually wants from the session. Everyone writes their 'What's In It For Me' on a sticky note at check-in, then reviews it again at closing.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Check-In", status:"publish", date:"2012-03-15", url:"https://facilitatingagility.wordpress.com/2012/03/15/facilitation-toolkit-activities-for-check-in/"}, {title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"introduction-card", name:"Introduction Card", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Low psychological safety"],
+    blurb:"Pairs create a card capturing their partner's name, role, an interesting fact and a 'superhero quality,' then introduce each other — a fast trust-builder for teams that don't know each other well.",
+    detail:"A fast way to build trust between people who don't know each other. In pairs, interview your partner and fill in a card — name, role, one fact, one 'superhero quality' — then introduce them to the group.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Check-In", status:"publish", date:"2012-03-15", url:"https://facilitatingagility.wordpress.com/2012/03/15/facilitation-toolkit-activities-for-check-in/"}]
+  },
+  {
+    id:"working-agreements", name:"Working Agreements", kind:"Practice",
+    thinking:["Agile/Scrum"], problem:["Conflict", "Unclear ownership", "Low psychological safety"],
+    blurb:"Explicit team agreement on how to handle distractions, conflict, and tangents — set once as a standing team norm or freshly for a single session.",
+    detail:"The team explicitly agrees, out loud, on how they'll handle things like distractions, disagreement, and going off-topic — either as a standing agreement that carries across every session, or freshly at the start of a single meeting. Making the agreement explicit rather than assumed means there's something concrete to point back to later ('we agreed we'd do X') rather than relitigating the norm itself in the middle of a disagreement.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Check-In", status:"publish", date:"2012-03-15", url:"https://facilitatingagility.wordpress.com/2012/03/15/facilitation-toolkit-activities-for-check-in/"}]
+  },
+  {
+    id:"how-can-we-fail", name:"“How Can We Make This Fail?”", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Risk blindness", "Low psychological safety"],
+    blurb:"A round-robin prompt asking the group to name ways the session or sprint could fail — surfaces fears and unsupportive behaviors before they derail things quietly.",
+    detail:"Surfaces fears before they derail the session. Go round the group asking each person to name one way this session or sprint could fail.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Check-In", status:"publish", date:"2012-03-15", url:"https://facilitatingagility.wordpress.com/2012/03/15/facilitation-toolkit-activities-for-check-in/"}]
+  },
+  {
+    id:"focus-on-off", name:"Focus On / Focus Off", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Low psychological safety"],
+    blurb:"Names collaborative versus obstructive behaviors directly, building shared awareness of what helps and hinders the group before work begins.",
+    detail:"Builds shared awareness of helpful vs. unhelpful behaviour. As a group, name specific behaviours under 'Focus On' (helps us collaborate) and 'Focus Off' (gets in the way).", detailSource:"elaborated",
+    sources:[{title:"Facilitation Toolkit: Check-In", status:"publish", date:"2012-03-15", url:"https://facilitatingagility.wordpress.com/2012/03/15/facilitation-toolkit-activities-for-check-in/"}]
+  },
+  {
+    id:"hope-for-the-meeting", name:"Hope for the Meeting", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Unproductive or unfocused meetings"],
+    blurb:"A quick round where each person names their hope for the session or sprint, creating shared understanding of individual objectives up front.",
+    detail:"Surfaces individual expectations fast. Quick round — each person states, in one sentence, their hope for the session or sprint.", detailSource:"elaborated",
+    sources:[{title:"Facilitation Toolkit: Check-In", status:"publish", date:"2012-03-15", url:"https://facilitatingagility.wordpress.com/2012/03/15/facilitation-toolkit-activities-for-check-in/"}]
+  },
+  {
+    id:"metaphor-checkin", name:"Metaphor Check-In", kind:"Tool",
+    thinking:["Agile/Scrum", "Design Thinking"], problem:["Team lacks shared context"],
+    blurb:"Describe the sprint or team as a fruit, a vehicle, a colour, or a drawing — bypasses everyday jargon to surface underlying themes or tensions quickly and safely.",
+    detail:"Surfaces themes or tensions without people needing to name them directly. Ask the group to describe the sprint or team as a fruit, a vehicle, a colour, or a quick drawing.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Check-In", status:"publish", date:"2012-03-15", url:"https://facilitatingagility.wordpress.com/2012/03/15/facilitation-toolkit-activities-for-check-in/"}]
+  },
+  {
+    id:"activities-over-time", name:"Activities Over Time + Emotions Timeline", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Team lacks shared context"],
+    blurb:"Each person plots their activities and emotional highs/lows across the sprint on a shared timeline — surfaces individual experience and what mattered most to each person.",
+    detail:"Surfaces each person's individual experience of the sprint. Everyone draws a timeline of their activities and emotional highs/lows, then shares it.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Opening", status:"publish", date:"2012-04-02", url:"https://facilitatingagility.wordpress.com/2012/04/02/facilitation-toolkit-activities-for-opening/"}]
+  },
+  {
+    id:"what-was-my-pace", name:"What Was My Pace", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Poor flow", "Team lacks shared context"],
+    blurb:"Same format as the emotions timeline, but tracking when each person felt balanced, rushed, or overworked — good for diagnosing uneven or disconnected sprints.",
+    detail:"Shows who was overworked or underused during the sprint. Same timeline format as the emotions timeline, but tracking pace — balanced, rushed, or overworked — instead of feeling.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Opening", status:"publish", date:"2012-04-02", url:"https://facilitatingagility.wordpress.com/2012/04/02/facilitation-toolkit-activities-for-opening/"}]
+  },
+  {
+    id:"history-map", name:"History Map", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Team lacks shared context"],
+    blurb:"A timeline of events that shaped a company's direction over time — good for company-level retrospectives and sharing corporate knowledge.",
+    detail:"Shares corporate memory and shows what shaped the company's direction. Build a timeline together of the events that mattered, over a longer period than one sprint.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Opening", status:"publish", date:"2012-04-02", url:"https://facilitatingagility.wordpress.com/2012/04/02/facilitation-toolkit-activities-for-opening/"}]
+  },
+  {
+    id:"learning-matrix", name:"Learning Matrix (word-grid formats)", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Team lacks shared context"],
+    blurb:"A short thematic word-grid — Liked/Lacked/Learned/Longed For, Proud/Sorry/Grateful, Confident/Concerns/Challenges/Chocolate, Helped/Hindered/Hypothesis, and other variants — that categorizes experience to prompt group memory.",
+    detail:"A quick way to categorize experience and prompt memory. Fill in a short word-grid individually, then compare — pick the variant that fits: Liked/Lacked/Learned/Longed For, Proud/Sorry/Grateful, Confident/Concerns/Challenges/Chocolate, and others.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Opening", status:"publish", date:"2012-04-02", url:"https://facilitatingagility.wordpress.com/2012/04/02/facilitation-toolkit-activities-for-opening/"}, {title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"circles-and-soup", name:"Circles & Soup", kind:"Tool",
+    thinking:["Agile/Scrum", "Systems Thinking"], problem:["Weak goal-setting or follow-through"],
+    blurb:"Sorts what's happening into within our control vs. outside our control — useful for identifying actions a team can actually own, especially when blame or helplessness is in the air.",
+    detail:"Redirects the conversation to what the team can actually own. Draw an inner circle (within our control) and an outer ring (outside our control), then sort current issues into each.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Opening", status:"publish", date:"2012-04-02", url:"https://facilitatingagility.wordpress.com/2012/04/02/facilitation-toolkit-activities-for-opening/"}]
+  },
+  {
+    id:"sailboat", name:"Sailboat", kind:"Tool",
+    thinking:["Agile/Scrum", "Design Thinking"], problem:["Team lacks shared context", "Stakeholder misalignment"],
+    blurb:"What's in our sails (helping us), what's our anchor (holding us back), what's our destination — a visual metaphor that creates a shared sense of direction.",
+    detail:"Creates a shared sense of direction through a visual metaphor. Draw a boat; as a group, fill in the wind (what's helping), the anchor (what's holding us back), and the destination.", detailSource:"elaborated",
+    sources:[{title:"Facilitation Toolkit: Opening", status:"publish", date:"2012-04-02", url:"https://facilitatingagility.wordpress.com/2012/04/02/facilitation-toolkit-activities-for-opening/"}]
+  },
+  {
+    id:"swot-timeline", name:"Strengths/Weaknesses/Opportunities Timeline", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Team lacks shared context"],
+    blurb:"Combines an events timeline (past) with strengths and weaknesses (present) and opportunities achievable next sprint (future) in one visual.",
+    detail:"Combines past, present, and future in one visual. Draw an events timeline around the edge, Strengths/Weaknesses in the middle, Opportunities for next sprint layered on top.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Opening", status:"publish", date:"2012-04-02", url:"https://facilitatingagility.wordpress.com/2012/04/02/facilitation-toolkit-activities-for-opening/"}]
+  },
+  {
+    id:"draw-the-problem", name:"Draw the Problem", kind:"Tool",
+    thinking:["Agile/Scrum", "Design Thinking"], problem:["Weak root-cause analysis"],
+    blurb:"A longer drawing exercise, similar to the check-in drawing activity, that surfaces deeper connections and associations than words alone.",
+    detail:"Surfaces connections words alone miss. A longer version of the check-in drawing exercise — the group takes real time to draw out the problem as they see it.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Opening", status:"publish", date:"2012-04-02", url:"https://facilitatingagility.wordpress.com/2012/04/02/facilitation-toolkit-activities-for-opening/"}]
+  },
+  {
+    id:"mind-mapping", name:"Mind Mapping", kind:"Tool",
+    thinking:["Agile/Scrum", "Design Thinking"], problem:["Team lacks shared context"],
+    blurb:"Fast generation of related information around a central topic — most useful with a tight timebox, resisting the urge to sort too early.",
+    detail:"Fast generation of related ideas. Start from a central topic, branch outward as ideas come, keep it tightly timeboxed, sort afterward.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Opening", status:"publish", date:"2012-04-02", url:"https://facilitatingagility.wordpress.com/2012/04/02/facilitation-toolkit-activities-for-opening/"}]
+  },
+  {
+    id:"group-posters", name:"Group Posters & Feedback", kind:"Tool",
+    thinking:["Agile/Scrum", "Design Thinking"], problem:["Team lacks shared context"],
+    blurb:"A collaborative poster-making activity for sharing perspectives across the group before moving into deeper analysis.",
+    detail:"Surfaces perspectives through a shared, physical activity. Small groups build a poster on the topic, then share it back to everyone with time for questions.", detailSource:"elaborated",
+    sources:[{title:"Facilitation Toolkit: Opening", status:"publish", date:"2012-04-02", url:"https://facilitatingagility.wordpress.com/2012/04/02/facilitation-toolkit-activities-for-opening/"}]
+  },
+  {
+    id:"locate-strengths", name:"Locate Strengths", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Low psychological safety"],
+    blurb:"A larger-group activity for getting to know team members and discovering skills that would otherwise stay hidden.",
+    detail:"Uncovers skills that aren't visible day-to-day. In a larger group, participants interview each other specifically to find hidden strengths.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Opening", status:"publish", date:"2012-04-02", url:"https://facilitatingagility.wordpress.com/2012/04/02/facilitation-toolkit-activities-for-opening/"}]
+  },
+  {
+    id:"random-input", name:"Random Input", kind:"Tool",
+    thinking:["Design Thinking"], problem:["Weak root-cause analysis"],
+    blurb:"Aligns the problem with the attributes of a randomly chosen object to force unexpected connections and generate ideas outside the obvious.",
+    detail:"Forces unexpected connections. Pick a random object, then deliberately connect its attributes to the problem at hand.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Exploring", status:"publish", date:"2012-04-23", url:"https://facilitatingagility.wordpress.com/2012/04/23/facilitation-toolkit-activities-for-exploring/"}]
+  },
+  {
+    id:"brainwriting", name:"Brainwriting", kind:"Tool",
+    thinking:["Design Thinking"], problem:["Weak root-cause analysis"],
+    blurb:"Participants generate ideas individually then build on each other's in writing — avoids groupthink and gives quieter voices equal input.",
+    detail:"Gives quieter voices equal input. Everyone writes ideas individually and silently first, then ideas circulate for others to build on.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Exploring", status:"publish", date:"2012-04-23", url:"https://facilitatingagility.wordpress.com/2012/04/23/facilitation-toolkit-activities-for-exploring/"}]
+  },
+  {
+    id:"anti-problem", name:"Anti-Problem", kind:"Tool",
+    thinking:["Design Thinking"], problem:["Weak root-cause analysis"],
+    blurb:"Solving the opposite of your actual problem — reframes the issue from a different angle and often surfaces ideas direct brainstorming misses.",
+    detail:"Surfaces causes a direct brainstorm misses. Solve the opposite of your problem, then reverse the answers.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Exploring", status:"publish", date:"2012-04-23", url:"https://facilitatingagility.wordpress.com/2012/04/23/facilitation-toolkit-activities-for-exploring/"}]
+  },
+  {
+    id:"destruction-plan", name:"Destruction Plan", kind:"Tool",
+    thinking:["Design Thinking"], problem:["Risk blindness"],
+    blurb:"Taking the Anti-Problem further: deliberately plan how to destroy what you have, to surface the tools, processes and risks you'd normally overlook.",
+    detail:"Surfaces vulnerabilities a constructive conversation talks around. Deliberately plan how to destroy what currently exists.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Exploring", status:"publish", date:"2012-04-23", url:"https://facilitatingagility.wordpress.com/2012/04/23/facilitation-toolkit-activities-for-exploring/"}]
+  },
+  {
+    id:"speedboat", name:"Speedboat", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Risk blindness", "Poor flow"],
+    blurb:"What's weighing us down and slowing us from moving at the speed we expected — a quick, visual way to surface obstacles collaboratively.",
+    detail:"Names obstacles concretely instead of vaguely. Draw a boat with anchors, and have the group name what each anchor represents.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Exploring", status:"publish", date:"2012-04-23", url:"https://facilitatingagility.wordpress.com/2012/04/23/facilitation-toolkit-activities-for-exploring/"}]
+  },
+  {
+    id:"pre-mortem", name:"Pre-Mortem", kind:"Tool",
+    thinking:["Theory of Constraints", "Design Thinking"], problem:["Risk blindness"],
+    blurb:"Imagines the project has already failed, then works backward to find why — surfaces underlying problems while there's still time to act on them.",
+    detail:"Makes people willing to name uncomfortable risks. Imagine the project has already failed, then work backward to find why.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Exploring", status:"publish", date:"2012-04-23", url:"https://facilitatingagility.wordpress.com/2012/04/23/facilitation-toolkit-activities-for-exploring/"}]
+  },
+  {
+    id:"ritual-dissent", name:"Ritual Dissent", kind:"Tool",
+    thinking:["Design Thinking"], problem:["Conflict", "Risk blindness"],
+    blurb:"An idea-generating-then-challenging exercise across teams that surfaces risks and tests assumptions — needs high trust and at least 3–4 groups to work.",
+    detail:"Pressure-tests an idea without attacking the person. One team presents; another challenges it while the presenter just listens and takes notes. Needs high trust and 3–4 groups.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Exploring", status:"publish", date:"2012-04-23", url:"https://facilitatingagility.wordpress.com/2012/04/23/facilitation-toolkit-activities-for-exploring/"}]
+  },
+  {
+    id:"five-whys", name:"Five Whys", kind:"Tool",
+    thinking:["Lean"], problem:["Weak root-cause analysis", "Chronic firefighting"],
+    blurb:"Ask 'why' roughly five times to move past the visible symptom of a recurring problem and reach the actual human or process cause.",
+    detail:"Gets past the symptom to the actual cause. Ask 'why' about five times in a row, starting from the problem.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Exploring", status:"publish", date:"2012-04-23", url:"https://facilitatingagility.wordpress.com/2012/04/23/facilitation-toolkit-activities-for-exploring/"}]
+  },
+  {
+    id:"cause-and-effect", name:"Cause and Effect Diagram (Fishbone)", kind:"Tool",
+    thinking:["Lean"], problem:["Weak root-cause analysis"],
+    blurb:"Maps visible symptoms against their causes and effects, revealing reinforcing loops — useful for deciding what to fix first and how it will ripple through the system.",
+    detail:"Makes reinforcing loops visible. Also called a Fishbone diagram — write the problem at the head, branch out causes by category (people, process, tools, environment).", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Exploring", status:"publish", date:"2012-04-23", url:"https://facilitatingagility.wordpress.com/2012/04/23/facilitation-toolkit-activities-for-exploring/"}]
+  },
+  {
+    id:"a3-thinking", name:"A3 Thinking", kind:"Method",
+    thinking:["Lean"], problem:["Weak root-cause analysis"],
+    blurb:"Toyota's one-page, total-picture method for understanding an issue and testing corrective measures — thorough, and best reserved for significant problems rather than small ones.",
+    detail:"A structured, one-page format (traditionally sized to fit an A3 sheet of paper) walking through: background, current condition, goal, root-cause analysis, proposed countermeasures, plan, and follow-up check. It incorporates other root-cause techniques (like Five Whys or a Fishbone diagram) as one step within the larger structure. Genuinely thorough, which makes it the right tool for a significant, recurring problem — and overkill for anything small enough to fix in a single conversation.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Exploring", status:"publish", date:"2012-04-23", url:"https://facilitatingagility.wordpress.com/2012/04/23/facilitation-toolkit-activities-for-exploring/"}]
+  },
+  {
+    id:"clustering", name:"Clustering", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Weak root-cause analysis"],
+    blurb:"Grouping related ideas together as a first step to identifying underlying causes and surfacing where the group agrees or diverges.",
+    detail:"Surfaces where the group agrees or diverges. Physically group related ideas together, without labeling yet.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Exploring", status:"publish", date:"2012-04-23", url:"https://facilitatingagility.wordpress.com/2012/04/23/facilitation-toolkit-activities-for-exploring/"}]
+  },
+  {
+    id:"identify-themes", name:"Identify Themes", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Team lacks shared context"],
+    blurb:"Having the team name the clusters of ideas themselves, building agreement on categories through discussion rather than facilitator labeling.",
+    detail:"Builds real agreement on categories. After clustering, have the team — not the facilitator — name each cluster.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Exploring", status:"publish", date:"2012-04-23", url:"https://facilitatingagility.wordpress.com/2012/04/23/facilitation-toolkit-activities-for-exploring/"}]
+  },
+  {
+    id:"debrief-open-questions", name:"Debrief (Open Questions)", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Team lacks shared context"],
+    blurb:"Open questions that draw attention to emerging patterns, run as a quick round-robin or murmur exercise once data is on the table.",
+    detail:"Draws attention to emerging patterns. Ask open questions like 'what do you notice?' as a quick round-robin or murmur exercise.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Exploring", status:"publish", date:"2012-04-23", url:"https://facilitatingagility.wordpress.com/2012/04/23/facilitation-toolkit-activities-for-exploring/"}]
+  },
+  {
+    id:"ordering", name:"Ordering", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Weak goal-setting or follow-through"],
+    blurb:"Simply placing ideas in priority order on the board — doing this in silence first surfaces the items worth debating.",
+    detail:"Surfaces what's worth debating. Place ideas in priority order on the board — doing the first pass in silence works well.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"dot-voting", name:"Dot Voting", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Weak goal-setting or follow-through"],
+    blurb:"A fast scarcity-based vote (a fixed number of dots per person) that clarifies personal commitment and group priority at a glance.",
+    detail:"Clarifies group priority at a glance. Give each person a fixed, small number of dots to place on their top choices.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"impact-effort-matrix", name:"Impact/Effort Matrix", kind:"Tool",
+    thinking:["Agile/Scrum", "Lean"], problem:["Weak goal-setting or follow-through", "Wrong metrics"],
+    blurb:"A timeless 2x2 for sorting ideas into short, medium, and long-term plans by impact vs. effort — swap the axes (risk vs. impact, importance vs. urgency) for related decision grids.",
+    detail:"Sorts ideas into short/medium/long-term plans. Plot each idea on a 2x2 grid — Impact vs. Effort.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"thirty-five", name:"Thirty-Five", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Weak goal-setting or follow-through"],
+    blurb:"A quick-and-dirty way to share and rank ideas in one pass, with each person 'selling' an idea as it circulates — works well for groups of ten or more.",
+    detail:"Fast rough-ranking for a big group. Everyone writes one idea on a card; cards circulate and each person scores every card they see.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"goal-focus", name:"Goal Focus", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Weak goal-setting or follow-through"],
+    blurb:"Four questions to pressure-test a goal once there's consensus: can we do it, why does it matter, what could stop us, how will we know it's done.",
+    detail:"Pressure-tests a goal before committing. Ask: can we do it, why does it matter, what could stop us, how will we know it's done.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"thumb-vote", name:"Thumb Vote", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Weak goal-setting or follow-through"],
+    blurb:"A simple up/sideways/down physical vote on agreement with a proposed goal — faster and more honest than a verbal show of hands.",
+    detail:"A fast, honest read on agreement. Thumb up (agree), sideways (neutral), down (disagree) — on a count, everyone shows at once.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"vote-with-feet", name:"Vote with Your Feet", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Stakeholder misalignment"],
+    blurb:"A spatial vote where participants physically stand along a line to show their position on an issue — visible, energizing, and good for larger groups.",
+    detail:"Makes the spread of opinion visible. Mark a line across the room; people stand where their position on the issue sits.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"jump-vote", name:"Jump Vote", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Weak goal-setting or follow-through"],
+    blurb:"A physical, energizing vote where each person jumps to show their level of commitment or enjoyment — best for lighthearted topics and bigger groups.",
+    detail:"An energizing commitment check for lighthearted topics. Each person jumps — higher jump, stronger commitment.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"problem-solving-tree", name:"Problem Solving Tree", kind:"Tool",
+    thinking:["Agile/Scrum", "Theory of Constraints"], problem:["Weak goal-setting or follow-through"],
+    blurb:"Repeatedly asking 'how can we do that?' branches a goal down into concrete, actionable steps.",
+    detail:"Branches a goal into concrete steps. Start from the goal, repeatedly ask 'how can we do that?' at each level.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"graphic-gameplan", name:"Graphic Gameplan", kind:"Tool",
+    thinking:["Agile/Scrum", "Design Thinking"], problem:["Weak goal-setting or follow-through"],
+    blurb:"A visual map of the major steps required to meet each objective — good for high-level, collaborative project views.",
+    detail:"A shared, high-level view of the plan. Draw the major steps needed to reach each objective, built together.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"who-what-when", name:"Who/What/When Matrix", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Unclear ownership"],
+    blurb:"A simple grid for turning a goal into a concrete action plan with a named owner and a date attached to each item.",
+    detail:"Turns a goal into an owned action plan. Fill in a Who / What / When grid together — every action needs a name and a date.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"plus-delta", name:"Plus/Delta", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Weak goal-setting or follow-through"],
+    blurb:"A quick two-column closing format capturing what was positive and what should change next time.",
+    detail:"A fast, repeatable closing format. Two columns: Plus (what was positive), Delta (what should change).", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"start-stop-continue", name:"Start / Stop / Continue", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Weak goal-setting or follow-through"],
+    blurb:"A process-focused format naming what to start doing, stop doing, and continue doing — the More Of / Less Of wheel variant adds nuance between 'stop' and 'do less.'",
+    detail:"Names what to change going forward. Team lists what to Start, Stop, and Continue — add More Of / Less Of for more nuance.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Opening", status:"publish", date:"2012-04-02", url:"https://facilitatingagility.wordpress.com/2012/04/02/facilitation-toolkit-activities-for-opening/"}, {title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"helped-hindered-hypothesis", name:"Helped / Hindered / Hypothesis", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Team lacks shared context"],
+    blurb:"Frames how well participants were able to contribute, and what they think caused that — useful for measuring whether a recent change or improvement is actually working.",
+    detail:"Measures whether a change is actually working. Three prompts: what Helped, what Hindered, and our Hypothesis about why.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Opening", status:"publish", date:"2012-04-02", url:"https://facilitatingagility.wordpress.com/2012/04/02/facilitation-toolkit-activities-for-opening/"}, {title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"three-wishes", name:"Three Wishes", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Weak goal-setting or follow-through"],
+    blurb:"A closing round where each person names one thing they'd love to see happen — surfaces individual aspirations the group can build toward.",
+    detail:"Surfaces individual aspirations. Closing round — each person names one thing they'd love to see happen.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"one-takeaway", name:"1 Takeaway", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Unproductive or unfocused meetings"],
+    blurb:"Each person names the single thing they're taking away from the session — a light, fast way to close and check the session landed.",
+    detail:"A fast check that the session landed. Each person names, in one sentence, what they're taking away.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"temperature-reading", name:"Temperature Reading", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Unproductive or unfocused meetings"],
+    blurb:"A structured debrief technique well suited to longer sessions, giving a fuller read on how the group is feeling as it wraps up.",
+    detail:"A fuller emotional read for longer sessions. Structured round covering appreciation, new information, questions, and concerns/hopes.", detailSource:"elaborated",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+  {
+    id:"appreciations", name:"Appreciations", kind:"Tool",
+    thinking:["Agile/Scrum"], problem:["Low psychological safety"],
+    blurb:"Naming specific contributions from teammates that would otherwise go unnoticed — a simple way to end a session on a genuinely positive note.",
+    detail:"Ends the session on a genuine positive note. Each person names one specific contribution someone else made.", detailSource:"original",
+    sources:[{title:"Facilitation Toolkit: Closing", status:"publish", date:"2012-06-17", url:"https://facilitatingagility.wordpress.com/2012/06/17/facilitation-toolkit-activities-for-closing/"}]
+  },
+];
+
+const THINKING_TAGS = [...new Set(LIBRARY.flatMap(e => e.thinking))].sort();
+const PROBLEM_TAGS = [...new Set(LIBRARY.flatMap(e => e.problem))].sort();
+const state = { thinking:new Set(), problem:new Set() };
+
+function buildChips(){
+  const tWrap = document.getElementById('thinking-chips');
+  const pWrap = document.getElementById('problem-chips');
+  THINKING_TAGS.forEach(tag=>{
+    const b=document.createElement('button');
+    b.className='chip'; b.dataset.group='thinking'; b.textContent=tag;
+    b.onclick=()=>toggleTag('thinking',tag,b);
+    tWrap.appendChild(b);
+  });
+  PROBLEM_TAGS.forEach(tag=>{
+    const b=document.createElement('button');
+    b.className='chip'; b.dataset.group='problem'; b.textContent=tag;
+    b.onclick=()=>toggleTag('problem',tag,b);
+    pWrap.appendChild(b);
+  });
+}
+function toggleTag(group,tag,btn){
+  if(state[group].has(tag)){state[group].delete(tag); btn.classList.remove('on');}
+  else{state[group].add(tag); btn.classList.add('on');}
+  renderGrid();
+}
+function clearFilters(){
+  state.thinking.clear(); state.problem.clear();
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  renderGrid();
+}
+function renderGrid(){
+  const grid=document.getElementById('card-grid');
+  const filtered = LIBRARY.filter(e=>{
+    const tOk = state.thinking.size===0 || e.thinking.some(t=>state.thinking.has(t));
+    const pOk = state.problem.size===0 || e.problem.some(p=>state.problem.has(p));
+    return tOk && pOk;
+  });
+  document.getElementById('result-count').textContent = `${filtered.length} of ${LIBRARY.length} entries`;
+  grid.innerHTML='';
+  if(filtered.length===0){
+    grid.innerHTML = '<div class="empty">No entries match that combination — try clearing a filter.</div>';
+    return;
+  }
+  filtered.forEach(e=>{
+    const card=document.createElement('div');
+    card.className='card';
+    card.innerHTML = `
+      <div class="card-top"><h3>${e.name}</h3><span class="acc">${e.id}</span></div>
+      <p class="kind">${e.kind}</p>
+      <p class="blurb">${e.blurb}</p>
+      <div class="detail-wrap" hidden>
+        <p class="detail">${e.detail}</p>
+        <p class="detail-note">${e.detailSource === 'elaborated' ? 'This write-up fills in general facilitation practice — the original post named the technique but did not describe how to run it.' : 'Written up from the original post.'}</p>
+      </div>
+      <button class="readmore-btn" type="button">Read more ▾</button>
+      <div class="tagrow">
+        ${e.thinking.map(t=>`<span class="tag thinking">${t}</span>`).join('')}
+        ${e.problem.map(p=>`<span class="tag problem">${p}</span>`).join('')}
+      </div>
+      <div class="source">${e.sources.map(s => s.url
+        ? `<a href="${s.url}" target="_blank" rel="noopener">${e.sources.length > 1 ? s.title + ' →' : 'Original post →'}</a>`
+        : `<span>${s.title}${e.sources.length > 1 ? ' — ' : ''}${s.status === 'private' ? 'private post' : s.status === 'draft' ? 'draft, never published' : ''}</span>`
+      ).join(e.sources.length > 1 ? '<br>' : '')}</div>`;
+    const btn = card.querySelector('.readmore-btn');
+    const wrap = card.querySelector('.detail-wrap');
+    btn.addEventListener('click', () => {
+      const open = !wrap.hidden;
+      wrap.hidden = open;
+      btn.textContent = open ? 'Read more ▾' : 'Show less ▴';
+    });
+    grid.appendChild(card);
+  });
+}
+
+function setView(view){
+  const browseOn = view==='browse';
+  document.getElementById('view-browse').hidden = !browseOn;
+  document.getElementById('view-diagnose').hidden = browseOn;
+  document.getElementById('tab-browse').classList.toggle('active', browseOn);
+  document.getElementById('tab-diagnose').classList.toggle('active', !browseOn);
+  document.getElementById('tab-browse').setAttribute('aria-selected', browseOn);
+  document.getElementById('tab-diagnose').setAttribute('aria-selected', !browseOn);
+}
+
+async function runMatch(){
+  const input = document.getElementById('challenge-input').value.trim();
+  const statusEl = document.getElementById('status');
+  const resultsEl = document.getElementById('results');
+  const btn = document.getElementById('go-btn');
+  resultsEl.innerHTML='';
+  if(!input){ statusEl.textContent='Describe the challenge first.'; return; }
+
+  btn.disabled = true;
+  statusEl.textContent='Checking against the index…';
+
+  const libraryForPrompt = LIBRARY.map(({id,name,kind,thinking,problem,blurb})=>({id,name,kind,thinking,problem,blurb}));
+  const systemPrompt = `You are a matching engine for a library of agile, lean, theory-of-constraints, systems-thinking and design-thinking practices. You will be given the library as JSON and a person's description of a real challenge. Select the 2 to 4 entries from the library whose "id" best fit the challenge. You must only use ids that exist in the provided library — never invent new ones. For each, write one or two sentences of "why" explaining specifically why it fits THIS challenge, in plain, direct language, not generic marketing copy. Respond with ONLY a raw JSON array, no markdown fences, no other text, in this exact shape: [{"id":"...","why":"..."}]`;
+
+  try{
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        model:"claude-sonnet-4-6",
+        max_tokens:1000,
+        system: systemPrompt,
+        messages:[
+          {role:"user", content:`Library:\n${JSON.stringify(libraryForPrompt)}\n\nChallenge:\n"""${input}"""`}
+        ]
+      })
+    });
+    const data = await response.json();
+    const textBlock = (data.content || []).find(b=>b.type==="text");
+    if(!textBlock) throw new Error("No response text");
+    const cleaned = textBlock.text.replace(/```json|```/g,"").trim();
+    const matches = JSON.parse(cleaned);
+
+    if(!Array.isArray(matches) || matches.length===0){
+      statusEl.textContent='';
+      resultsEl.innerHTML = '<div class="empty">No confident matches — try describing the challenge with more specifics.</div>';
+      btn.disabled=false;
+      return;
+    }
+
+    statusEl.textContent = `${matches.length} match${matches.length>1?'es':''} found`;
+    matches.forEach(m=>{
+      const entry = LIBRARY.find(e=>e.id===m.id);
+      if(!entry) return;
+      const slip=document.createElement('div');
+      slip.className='slip';
+      slip.innerHTML = `
+        <div class="slip-inner">
+          <span class="slip-stamp">MATCH — ${entry.thinking.join(' / ')}</span>
+          <h4>${entry.name}</h4>
+          <p class="kind">${entry.kind}</p>
+          <span class="why-label">Why this fits</span>
+          <p class="why">${m.why}</p>
+          <span class="why-label">How to run it</span>
+          <p class="why">${entry.detail}</p>
+        </div>`;
+      resultsEl.appendChild(slip);
+    });
+  }catch(err){
+    statusEl.textContent='';
+    resultsEl.innerHTML = `<div class="error">Couldn't complete the match right now (${err.message}). Try again in a moment.</div>`;
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+buildChips();
+renderGrid();
+</script>
+</body>
+</html>
